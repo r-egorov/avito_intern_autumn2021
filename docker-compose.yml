@@ -1,0 +1,24 @@
+version: '3'
+services:
+    postgres:
+        container_name: postgres
+        image: postgres:13
+        restart: unless-stopped
+        environment:
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=${POSTGRES_DB}
+            - APP_USER=${APP_USER}
+            - APP_USER_PASSWORD=${APP_USER_PASSWORD}
+            - APP_DB=${APP_DB}
+        ports:
+            - 5432:5432
+        networks:
+            - app-network
+        volumes:
+            - ./db/scripts:/docker-entrypoint-initdb.d/
+              #- ./db/data:/var/lib/postgresql/data
+
+networks:
+    app-network:
+        driver: bridge
