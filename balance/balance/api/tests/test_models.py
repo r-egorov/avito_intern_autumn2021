@@ -29,18 +29,18 @@ class TestModels(BaseTest):
         balance2.balance += 300
         balance2.save()
 
-        trans = Transaction.objects.create(source=balance1, target=balance2, amount=400)
+        trans = Transaction.objects.create(source=user1, target=user2, amount=400)
 
         try:
-            balance1.delete()
+            user1.delete()
         except models.deletion.RestrictedError:
             pass
 
         try:
-            balance2.delete()
+            user2.delete()
         except models.deletion.RestrictedError:
             pass
 
         self.assertTrue(Transaction.objects.get(pk=trans.id))
-        self.assertTrue(Balance.objects.get(pk=balance1.id))
-        self.assertTrue(Balance.objects.get(pk=balance2.id))
+        self.assertTrue(Balance.objects.get(pk=user1.id))
+        self.assertTrue(Balance.objects.get(pk=user2.id))
