@@ -11,9 +11,9 @@ class BaseTest(TestCase):
         cls.users.append(user)
 
         user = User.objects.create()
-        balance = Balance.objects.create(user=user)
+        balance = Balance.objects.create(user=user, balance=2000)
         cls.users.append(user)
 
         user = User.objects.create()
-        balance = Balance.objects.create(user=user)
+        balance = Balance.objects.create(user=user, balance=500)
         cls.users.append(user)

@@ -5,6 +5,7 @@ from rest_framework import serializers
 
 from .models import User, Balance, Transaction
 
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
