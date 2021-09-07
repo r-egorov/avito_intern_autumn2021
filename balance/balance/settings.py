@@ -14,7 +14,7 @@ SECRET_KEY = 'django-insecure-2&y5gutps1=^w8999hp8-4yjbi!m2y!67-u@7(urx3*eats)v7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["0.0.0.0"]
 
 
 # Application definition
@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'rest_framework',
     'balance.api'
 ]
 
@@ -74,7 +75,7 @@ DATABASES = {
         'NAME': "balance",
         'USER': "cisis",
         'PASSWORD': "cisis",
-        'HOST': "192.168.99.107",
+        'HOST': "192.168.99.108",
         'PORT': '5432'
     }
 }
@@ -104,7 +105,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Moscow'
 
 USE_I18N = True
 
@@ -124,37 +125,39 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'rest_framework_json_api.exceptions.exception_handler',
-    'DEFAULT_PAGINATION_CLASS':
-        'rest_framework_json_api.pagination.JsonApiPageNumberPagination',
-    'DEFAULT_PARSER_CLASSES': (
-        'rest_framework_json_api.parsers.JSONParser',
-        'rest_framework.parsers.FormParser',
-        'rest_framework.parsers.MultiPartParser'
-    ),
-    'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework_json_api.renderers.JSONRenderer',
-        # If you're performance testing, you will want to use the browseable API
-        # without forms, as the forms can generate their own queries.
-        # If performance testing, enable:
-        # 'example.utils.BrowsableAPIRendererWithoutForms',
-        # Otherwise, to play around with the browseable API, enable:
-        'rest_framework_json_api.renderers.BrowsableAPIRenderer'
-    ),
-    'DEFAULT_METADATA_CLASS': 'rest_framework_json_api.metadata.JSONAPIMetadata',
-    'DEFAULT_SCHEMA_CLASS': 'rest_framework_json_api.schemas.openapi.AutoSchema',
-    'DEFAULT_FILTER_BACKENDS': (
-        'rest_framework_json_api.filters.QueryParameterValidationFilter',
-        'rest_framework_json_api.filters.OrderingFilter',
-        'rest_framework_json_api.django_filters.DjangoFilterBackend',
-        'rest_framework.filters.SearchFilter',
-    ),
-    'SEARCH_PARAM': 'filter[search]',
-    'TEST_REQUEST_RENDERER_CLASSES': (
-        'rest_framework_json_api.renderers.JSONRenderer',
-    ),
-    'TEST_REQUEST_DEFAULT_FORMAT': 'vnd.api+json'
+    'COERCE_DECIMAL_TO_STRING': False
 }
+#     'EXCEPTION_HANDLER': 'rest_framework_json_api.exceptions.exception_handler',
+#     'DEFAULT_PAGINATION_CLASS':
+#         'rest_framework_json_api.pagination.JsonApiPageNumberPagination',
+#     'DEFAULT_PARSER_CLASSES': (
+#         'rest_framework_json_api.parsers.JSONParser',
+#         'rest_framework.parsers.FormParser',
+#         'rest_framework.parsers.MultiPartParser'
+#     ),
+#     'DEFAULT_RENDERER_CLASSES': (
+#         'rest_framework_json_api.renderers.JSONRenderer',
+#         # If you're performance testing, you will want to use the browseable API
+#         # without forms, as the forms can generate their own queries.
+#         # If performance testing, enable:
+#         # 'example.utils.BrowsableAPIRendererWithoutForms',
+#         # Otherwise, to play around with the browseable API, enable:
+#         'rest_framework_json_api.renderers.BrowsableAPIRenderer'
+#     ),
+#     'DEFAULT_METADATA_CLASS': 'rest_framework_json_api.metadata.JSONAPIMetadata',
+#     'DEFAULT_SCHEMA_CLASS': 'rest_framework_json_api.schemas.openapi.AutoSchema',
+#     'DEFAULT_FILTER_BACKENDS': (
+#         'rest_framework_json_api.filters.QueryParameterValidationFilter',
+#         'rest_framework_json_api.filters.OrderingFilter',
+#         'rest_framework_json_api.django_filters.DjangoFilterBackend',
+#         'rest_framework.filters.SearchFilter',
+#     ),
+#     'SEARCH_PARAM': 'filter[search]',
+#     'TEST_REQUEST_RENDERER_CLASSES': (
+#         'rest_framework_json_api.renderers.JSONRenderer',
+#     ),
+#     'TEST_REQUEST_DEFAULT_FORMAT': 'vnd.api+json'
+# }
 
 JSON_API_FORMAT_FIELD_NAMES = 'underscore'
 
