@@ -16,6 +16,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from .api import views
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("api/createuser/", views.CreateUser.as_view(), name="create-user"),
+    path("api/change-balance/", views.ChangeBalance.as_view(), name="change-balance"),
+    path("api/get-balance/", views.GetBalance.as_view(), name="get-balance")
 ]
