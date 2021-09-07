@@ -8,9 +8,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import JSONParser
 
-from typing import Dict, Optional
-
-from .serializers import UserSerializer, BalanceSerializer, ChangeBalanceSerializer, GetBalanceSerializer
+from .serializers import UserSerializer, BalanceSerializer, ChangeBalanceSerializer, GetBalanceSerializer, \
+    MakeTransferSerializer
 from .models import User, Balance, Transaction
 
 
@@ -77,5 +76,50 @@ class GetBalance(APIView):
             return Response({"errors": {"id": ["No user with such ID found"]}},
                             status=status.HTTP_404_NOT_FOUND)
 
-        serializer = BalanceSerializer(balance)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(BalanceSerializer(balance).data, status=status.HTTP_200_OK)
+
+
+class MakeTransfer(APIView):
+    resource_name = "make-transfer"
+
+    @transaction.atomic()
+    def post(self, request) -> Response:
+        serializer = MakeTransferSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        ids = {
+            "source_id": serializer.data.get("source_id"),
+            "target_id": serializer.data.get("target_id")
+        }
+        balances = []
+
+        for key in ids:
+            try:
+                balances.append(Balance.objects.get(user=ids[key]))
+            except Balance.DoesNotExist:
+                return Response({"errors": {key: ["No user with such ID found"]}},
+                                status=status.HTTP_404_NOT_FOUND)
+
+        source_balance = balances[0]
+        target_balance = balances[1]
+        amount = serializer.validated_data.get("amount")
+
+        source_balance.balance -= amount
+        source_balance.last_update = timezone.now()
+        try:
+            source_balance.clean_fields()
+        except exceptions.ValidationError:
+            return Response({"errors": {
+                "source_id": ["This balance would be negative after the transfer"]
+            }},
+                status=status.HTTP_400_BAD_REQUEST)
+
+        target_balance.balance += amount
+        target_balance.last_update = timezone.now()
+
+        source_balance.save()
+        target_balance.save()
+
+        return Response({"status": "OK"}, status=status.HTTP_200_OK)

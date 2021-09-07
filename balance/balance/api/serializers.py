@@ -5,7 +5,6 @@ from rest_framework import serializers
 
 from .models import User, Balance, Transaction
 
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -68,6 +67,7 @@ class ChangeBalanceSerializer(serializers.Serializer):
         instance.save()
         return instance
 
+
 class GetBalanceSerializer(serializers.Serializer):
     id = serializers.IntegerField()
 
@@ -78,3 +78,24 @@ class GetBalanceSerializer(serializers.Serializer):
                 'data': ['This field is required.']
             })
         return super().to_internal_value(data)
+
+
+class MakeTransferSerializer(serializers.Serializer):
+    source_id = serializers.IntegerField()
+    target_id = serializers.IntegerField()
+    amount = serializers.DecimalField(max_digits=9, decimal_places=2)
+
+    def to_internal_value(self, request_data):
+        data = request_data.get("data")
+        if not data:
+            raise serializers.ValidationError({
+                'data': ['This field is required.']
+            })
+        return super().to_internal_value(data)
+
+    def validate_amount(self, amount):
+        if amount < 0:
+            raise serializers.ValidationError('Can\'t be negative.')
+        return amount
+
+
