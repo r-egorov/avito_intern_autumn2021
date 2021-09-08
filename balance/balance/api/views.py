@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.parsers import JSONParser
 
 from .serializers import UserSerializer, BalanceSerializer, ChangeBalanceSerializer, GetBalanceSerializer, \
-    MakeTransferSerializer
+    MakeTransferSerializer, CreateUserSerializer
 from .models import User, Balance, Transaction
 
 
@@ -19,20 +19,18 @@ class CreateUser(APIView):
 
     @transaction.atomic()
     def post(self, request) -> Response:
-        data = request.data.get("data")
+        serializer = CreateUserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = User.objects.create()
 
-        user_serializer = UserSerializer(data=data)
-        if user_serializer.is_valid():
-            user = user_serializer.save()
-
-            balance_amount = data.get("balance")
+            balance_amount = serializer.validated_data.get("balance")
             balance_amount = balance_amount if balance_amount else 0
-            Balance.objects.create(user=user, balance=balance_amount)
+            balance = Balance.objects.create(user=user, balance=balance_amount)
 
             return Response(UserSerializer(user).data,
                             status=status.HTTP_201_CREATED)
 
-        return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ChangeBalance(APIView):
@@ -54,6 +52,13 @@ class ChangeBalance(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         serializer.update(balance, serializer.validated_data)
+
+        amount = serializer.validated_data.get("amount")
+        comment = "Deposit" if amount > 0 else "Withdrawal"
+        user = balance.user
+        trans = Transaction.objects.create(
+            amount=abs(amount), source=user, target=user, comment=comment
+        )
 
         return Response(BalanceSerializer(balance).data,
                         status=status.HTTP_200_OK)
@@ -121,5 +126,12 @@ class MakeTransfer(APIView):
 
         source_balance.save()
         target_balance.save()
+
+        trans = Transaction.objects.create(
+            amount=abs(amount),
+            source=source_balance.user,
+            target=target_balance.user,
+            comment="Transfer"
+        )
 
         return Response({"status": "OK"}, status=status.HTTP_200_OK)

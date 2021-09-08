@@ -7,24 +7,39 @@ from ..models import User, Balance, Transaction
 
 
 class TestViews(BaseTest):
-    def test_create_user_without_balance(self):
+    def test_create_user_no_balance_field(self):
         """
-        Has to return a 201 CREATED HTTP-response,
-        create a user with zero balance
+        Has to return a 400 BAD RESPONSE HTTP-response,
+        create no user
         """
         payload = {
-            "data": {}
+            "data": {
+                "balaance": 3000
+            }
         }
         payload = json.dumps(payload)
         res = self.client.post(reverse("create-user"),
                                data=payload,
                                content_type="application/json")
 
-        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.status_code, 400)
 
-        id = res.data.get("id")
-        balance = Balance.objects.get(user=id)
-        self.assertEqual(balance.balance, 0)
+    def test_create_user_negative_balance(self):
+        """
+        Has to return a 400 BAD RESPONSE HTTP-response,
+        create no user
+        """
+        payload = {
+            "data": {
+                "balance": -3000
+            }
+        }
+        payload = json.dumps(payload)
+        res = self.client.post(reverse("create-user"),
+                               data=payload,
+                               content_type="application/json")
+
+        self.assertEqual(res.status_code, 400)
 
     def test_get_balance_no_data_field(self):
         """
@@ -367,6 +382,33 @@ class TestViews(BaseTest):
                 "source_id": self.users[1].id,
                 "target_id": self.users[0].id,
                 "amount": 9999999
+            }
+        }
+        payload = json.dumps(payload)
+        res = self.client.post(reverse("make-transfer"),
+                               data=payload,
+                               content_type="application/json")
+        self.assertEqual(res.status_code, 400)
+
+        updated_balance0 = Balance.objects.get(user=self.users[0])
+        self.assertEqual(updated_balance0.balance, initial_balance0.balance)
+
+        updated_balance1 = Balance.objects.get(user=self.users[1])
+        self.assertEqual(updated_balance1.balance, initial_balance1.balance)
+
+    def test_make_transfer_negative_amount(self):
+        """
+        Has to return 400 BAD REQUEST HTTP-response,
+        make no changes to the database
+        """
+        initial_balance0 = Balance.objects.get(user=self.users[0])
+        initial_balance1 = Balance.objects.get(user=self.users[1])
+
+        payload = {
+            "data": {
+                "source_id": self.users[1].id,
+                "target_id": self.users[0].id,
+                "amount": -500
             }
         }
         payload = json.dumps(payload)

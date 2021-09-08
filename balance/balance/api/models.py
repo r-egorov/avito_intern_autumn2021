@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
 
 from typing import Dict
 from decimal import Decimal
@@ -21,6 +22,10 @@ class Balance(models.Model):
                                   validators=[MinValueValidator(0)])
     user = models.ForeignKey(User, on_delete=models.RESTRICT)
     last_update = models.DateTimeField(default=timezone.now)
+
+    def clean(self):
+        if self.balance < 0:
+            raise ValidationError("Balance can't be negative")
 
     def __repr__(self):
         return f"<Balance (ID: {self.id})>"
