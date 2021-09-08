@@ -24,7 +24,6 @@ class CreateUser(APIView):
             user = User.objects.create()
 
             balance_amount = serializer.validated_data.get("balance")
-            balance_amount = balance_amount if balance_amount else 0
             balance = Balance.objects.create(user=user, balance=balance_amount)
 
             return Response(UserSerializer(user).data,
