@@ -20,7 +20,7 @@ from .api import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("api/createuser/", views.CreateUser.as_view(), name="create-user"),
+    path("api/create-user/", views.CreateUser.as_view(), name="create-user"),
     path("api/change-balance/", views.ChangeBalance.as_view(), name="change-balance"),
     path("api/get-balance/", views.GetBalance.as_view(), name="get-balance"),
     path("api/make-transfer/", views.MakeTransfer.as_view(), name="make-transfer")
