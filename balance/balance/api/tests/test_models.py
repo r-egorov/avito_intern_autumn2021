@@ -10,10 +10,8 @@ class TestModels(BaseTest):
         balance = Balance.objects.get(user=user)
         self.assertTrue(balance)
 
-        try:
+        with self.assertRaises(models.deletion.RestrictedError):
             user.delete()
-        except models.deletion.RestrictedError:
-            pass
 
         self.assertTrue(User.objects.get(pk=user.id))
         self.assertTrue(Balance.objects.get(user=user))
@@ -31,15 +29,11 @@ class TestModels(BaseTest):
 
         trans = Transaction.objects.create(source=user1, target=user2, amount=400)
 
-        try:
+        with self.assertRaises(models.deletion.RestrictedError):
             user1.delete()
-        except models.deletion.RestrictedError:
-            pass
 
-        try:
+        with self.assertRaises(models.deletion.RestrictedError):
             user2.delete()
-        except models.deletion.RestrictedError:
-            pass
 
         self.assertTrue(Transaction.objects.get(pk=trans.id))
         self.assertTrue(Balance.objects.get(pk=user1.id))
