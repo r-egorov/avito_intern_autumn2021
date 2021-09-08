@@ -20,8 +20,8 @@ class User(models.Model):
 class Balance(models.Model):
     balance = models.DecimalField(max_digits=9, decimal_places=2, default=0, null=False,
                                   validators=[MinValueValidator(0)])
-    user = models.ForeignKey(User, on_delete=models.RESTRICT)
-    last_update = models.DateTimeField(default=timezone.now)
+    user = models.OneToOneField(User, on_delete=models.RESTRICT)
+    last_update = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
         if self.balance < 0:
@@ -46,7 +46,7 @@ class Transaction(models.Model):
                                  validators=[MinValueValidator(0)])
     source = models.ForeignKey(User, on_delete=models.RESTRICT, related_name="source")
     target = models.ForeignKey(User, on_delete=models.RESTRICT, related_name="target")
-    comment = models.CharField(max_length=4096)
+    comment = models.TextField(max_length=4096)
     timestamp = models.DateTimeField(default=timezone.now)
 
     def __repr__(self):

@@ -8,7 +8,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import JSONParser
 
-from .serializers import UserSerializer, BalanceSerializer, ChangeBalanceSerializer, GetBalanceSerializer, \
+from .serializers import UserSerializer, BalanceSerializer, \
+    ChangeBalanceSerializer, GetBalanceSerializer, \
     MakeTransferSerializer, CreateUserSerializer
 from .models import User, Balance, Transaction
 
