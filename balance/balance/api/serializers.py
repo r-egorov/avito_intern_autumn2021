@@ -27,27 +27,11 @@ class BalanceSerializer(serializers.ModelSerializer):
         model = Balance
         fields = ["balance", "user_id", "last_update"]
 
-    # def to_representation(self, instance: Balance):
-    #     return {
-    #         "user_id": instance.user_id,
-    #         "balance": instance.balance,
-    #         "last_update": instance.last_update
-    #     }
-
 
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = ["amount", "source_id", "target_id", "comment", "timestamp"]
-
-    # def to_representation(self, instance: Transaction):
-    #     return {
-    #         "amount": instance.amount,
-    #         "source_id": instance.source_id,
-    #         "target_id": instance.target_id,
-    #         "comment": instance.comment,
-    #         "timestamp": instance.timestamp
-    #     }
 
 
 class ChangeBalanceSerializer(MyBaseSerializer):
