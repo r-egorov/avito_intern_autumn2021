@@ -27,31 +27,27 @@ class BalanceSerializer(serializers.ModelSerializer):
         model = Balance
         fields = ["balance", "user_id", "last_update"]
 
-    def to_representation(self, instance: Balance):
-        return {
-            "data": {
-                "user_id": instance.user_id,
-                "balance": instance.balance,
-                "last_update": instance.last_update
-            }
-        }
+    # def to_representation(self, instance: Balance):
+    #     return {
+    #         "user_id": instance.user_id,
+    #         "balance": instance.balance,
+    #         "last_update": instance.last_update
+    #     }
 
 
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        fields = ["amount", "source", "target", "comment", "timestamp"]
+        fields = ["amount", "source_id", "target_id", "comment", "timestamp"]
 
-    def to_representation(self, instance: Transaction):
-        return {
-            "data": {
-                "amount": instance.amount,
-                "source_id": instance.source_id,
-                "target_id": instance.target_id,
-                "comment": instance.comment,
-                "timestamp": instance.timestamp
-            }
-        }
+    # def to_representation(self, instance: Transaction):
+    #     return {
+    #         "amount": instance.amount,
+    #         "source_id": instance.source_id,
+    #         "target_id": instance.target_id,
+    #         "comment": instance.comment,
+    #         "timestamp": instance.timestamp
+    #     }
 
 
 class ChangeBalanceSerializer(MyBaseSerializer):
@@ -59,7 +55,7 @@ class ChangeBalanceSerializer(MyBaseSerializer):
     amount = serializers.DecimalField(max_digits=9, decimal_places=2)
 
     def update(self, instance: Balance, validated_data):
-        instance.balance += validated_data.get("amount")
+        instance.balance += validated_data.pop("amount")
         instance.last_update = timezone.now()
         try:
             instance.clean_fields()
@@ -73,7 +69,6 @@ class ChangeBalanceSerializer(MyBaseSerializer):
 
 class GetBalanceSerializer(MyBaseSerializer):
     user_id = serializers.IntegerField()
-
 
 class MakeTransferSerializer(MyBaseSerializer):
     source_id = serializers.IntegerField()

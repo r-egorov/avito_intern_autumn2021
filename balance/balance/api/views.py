@@ -86,22 +86,22 @@ class ChangeBalance(BaseView):
     def handler(self, serializer) -> Response:
         payload = {}
         http_status = status.HTTP_200_OK
+        amount: Decimal = serializer.validated_data.get("amount")
 
         try:
-            amount: Decimal = serializer.validated_data.get("amount")
             balance: Balance = self.get_balances(serializer, "user_id")[0]
             serializer.update(balance, serializer.validated_data)
             self.do_transaction(balance.user_id, amount)
-            payload = BalanceSerializer(balance).data
+            payload["data"] = BalanceSerializer(balance).data
         except BalanceDoesNotExist as e:
             if amount < 0:
                 http_status = status.HTTP_404_NOT_FOUND
-                payload = {"errors": {e.field_name: ["No user with such ID found"]}}
+                payload["errors"] = {e.field_name: ["No user with such ID found"]}
             else:
                 user_id = serializer.validated_data.get("user_id")
                 balance = Balance.objects.create(balance=amount, user_id=user_id)
                 balance_serializer = BalanceSerializer(balance)
-                payload = balance_serializer.data
+                payload["data"] = balance_serializer.data
                 http_status = status.HTTP_201_CREATED
 
         return Response(payload, status=http_status)
@@ -117,10 +117,10 @@ class GetBalance(BaseView):
 
         try:
             balance: Balance = self.get_balances(serializer, "user_id")[0]
-            payload = BalanceSerializer(balance).data
+            payload["data"] = BalanceSerializer(balance).data
         except BalanceDoesNotExist as e:
             http_status = status.HTTP_404_NOT_FOUND
-            payload = {"errors": {e.field_name: ["No user with such ID found"]}}
+            payload["errors"] = {e.field_name: ["No user with such ID found"]}
 
         return Response(payload, status=http_status)
 
@@ -169,14 +169,15 @@ class MakeTransfer(BaseView):
             balances: List[Balance] = self.get_balances(serializer, "source_id", "target_id")
             amount: Decimal = serializer.validated_data.get("amount")
             trans: Transaction = self.do_transaction(balances[0], balances[1], amount)
-            payload = TransactionSerializer(trans).data
+            payload["data"] = TransactionSerializer(trans).data
         except BalanceDoesNotExist as e:
-            payload = {"errors": {e.field_name: ["No user with such ID found"]}}
+            payload["errors"] = {e.field_name: ["No user with such ID found"]}
             http_status = status.HTTP_404_NOT_FOUND
         except exceptions.ValidationError:
-            payload = {
-                "errors": {"source_id": ["This balance would be negative after the transfer"]}
+            payload["errors"] = {
+                "source_id": ["This balance would be negative after the transfer"]
             }
             http_status = status.HTTP_400_BAD_REQUEST
 
         return Response(payload, status=http_status)
+
