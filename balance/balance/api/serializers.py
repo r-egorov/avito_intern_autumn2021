@@ -5,7 +5,7 @@ from django.core import exceptions
 
 from rest_framework import serializers
 
-from .models import User, Balance, Transaction
+from .models import Balance, Transaction
 
 
 class MyBaseSerializer(serializers.Serializer):
@@ -22,42 +22,15 @@ class MyBaseSerializer(serializers.Serializer):
         return super().to_internal_value(data)
 
 
-class UserSerializer(serializers.ModelSerializer, MyBaseSerializer):
-    balance = serializers.DecimalField(max_digits=9, decimal_places=2)
-
-    class Meta:
-        model = User
-        fields = ["id", "created", "balance"]
-
-    def validate_balance(self, balance: Decimal) -> Decimal:
-        if balance < 0:
-            raise serializers.ValidationError('Can\'t be negative.')
-        return balance
-
-    def create(self, validated_data) -> User:
-        balance: Decimal = validated_data.pop("balance")
-        user = User.objects.create()
-        Balance.objects.create(user=user, balance=balance)
-        return user
-
-    def to_representation(self, instance: User):
-        return {
-            "data": {
-                "id": instance.id,
-                "created": instance.created
-            }
-        }
-
-
 class BalanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Balance
-        fields = ["balance", "user", "last_update"]
+        fields = ["balance", "user_id", "last_update"]
 
     def to_representation(self, instance: Balance):
         return {
             "data": {
-                "user_id": instance.user.id,
+                "user_id": instance.user_id,
                 "balance": instance.balance,
                 "last_update": instance.last_update
             }
@@ -73,8 +46,8 @@ class TransactionSerializer(serializers.ModelSerializer):
         return {
             "data": {
                 "amount": instance.amount,
-                "source_id": instance.source.id,
-                "target_id": instance.target.id,
+                "source_id": instance.source_id,
+                "target_id": instance.target_id,
                 "comment": instance.comment,
                 "timestamp": instance.timestamp
             }
@@ -82,7 +55,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 
 class ChangeBalanceSerializer(MyBaseSerializer):
-    id = serializers.IntegerField()
+    user_id = serializers.IntegerField()
     amount = serializers.DecimalField(max_digits=9, decimal_places=2)
 
     def update(self, instance: Balance, validated_data):
@@ -92,14 +65,14 @@ class ChangeBalanceSerializer(MyBaseSerializer):
             instance.clean_fields()
         except exceptions.ValidationError:
             raise serializers.ValidationError({
-                'balance': ['Can\'t be negative.']
+                'balance': ['Would be negative after the operation.']
             })
         instance.save()
         return instance
 
 
 class GetBalanceSerializer(MyBaseSerializer):
-    id = serializers.IntegerField()
+    user_id = serializers.IntegerField()
 
 
 class MakeTransferSerializer(MyBaseSerializer):

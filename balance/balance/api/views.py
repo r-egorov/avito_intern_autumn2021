@@ -13,10 +13,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import JSONParser
 
-from .serializers import UserSerializer, BalanceSerializer, \
+from .serializers import BalanceSerializer, \
     ChangeBalanceSerializer, GetBalanceSerializer, \
     MakeTransferSerializer, TransactionSerializer
-from .models import User, Balance, Transaction
+from .models import Balance, Transaction
 from .exceptions import BalanceDoesNotExist
 
 
@@ -59,24 +59,10 @@ class BaseView(APIView):
 
         for key in ids:
             try:
-                balances.append(Balance.objects.get(user=ids[key]))
+                balances.append(Balance.objects.get(user_id=ids[key]))
             except Balance.DoesNotExist:
                 raise BalanceDoesNotExist(key)
         return balances
-
-
-class CreateUser(BaseView):
-    serializer = UserSerializer
-    resource_name = "create_user"
-
-    @transaction.atomic()
-    def handler(self, serializer) -> Response:
-        payload = {}
-        http_status = status.HTTP_200_OK
-
-        serializer.save()
-        payload = serializer.data
-        return Response(payload, status=http_status)
 
 
 class ChangeBalance(BaseView):
@@ -84,16 +70,16 @@ class ChangeBalance(BaseView):
     resource_name = "change_balance"
 
     @staticmethod
-    def do_transaction(user: User, amount: Decimal):
+    def do_transaction(user_id: int, amount: Decimal):
         """
-        Takes a User-instance and creates a Transaction-instance
+        Takes a user_id and creates a Transaction-instance
         with the amount
-        :param user: User-instance
+        :param user_id: int
         :param amount: Decimal - amount of Transaction
         """
         comment = "Deposit" if amount > 0 else "Withdrawal"
         Transaction.objects.create(
-            amount=abs(amount), source=user, target=user, comment=comment
+            amount=abs(amount), source_id=user_id, target_id=user_id, comment=comment
         )
 
     @transaction.atomic()
@@ -102,14 +88,21 @@ class ChangeBalance(BaseView):
         http_status = status.HTTP_200_OK
 
         try:
-            balance: Balance = self.get_balances(serializer, "id")[0]
+            amount: Decimal = serializer.validated_data.get("amount")
+            balance: Balance = self.get_balances(serializer, "user_id")[0]
             serializer.update(balance, serializer.validated_data)
-            self.do_transaction(balance.user,
-                                serializer.validated_data.get("amount"))
+            self.do_transaction(balance.user_id, amount)
             payload = BalanceSerializer(balance).data
         except BalanceDoesNotExist as e:
-            http_status = status.HTTP_404_NOT_FOUND
-            payload = {"errors": {e.field_name: ["No user with such ID found"]}}
+            if amount < 0:
+                http_status = status.HTTP_404_NOT_FOUND
+                payload = {"errors": {e.field_name: ["No user with such ID found"]}}
+            else:
+                user_id = serializer.validated_data.get("user_id")
+                balance = Balance.objects.create(balance=amount, user_id=user_id)
+                balance_serializer = BalanceSerializer(balance)
+                payload = balance_serializer.data
+                http_status = status.HTTP_201_CREATED
 
         return Response(payload, status=http_status)
 
@@ -123,7 +116,7 @@ class GetBalance(BaseView):
         http_status = status.HTTP_200_OK
 
         try:
-            balance: Balance = self.get_balances(serializer, "id")[0]
+            balance: Balance = self.get_balances(serializer, "user_id")[0]
             payload = BalanceSerializer(balance).data
         except BalanceDoesNotExist as e:
             http_status = status.HTTP_404_NOT_FOUND
@@ -161,8 +154,8 @@ class MakeTransfer(BaseView):
 
         trans = Transaction.objects.create(
             amount=abs(amount),
-            source=source_balance.user,
-            target=target_balance.user,
+            source_id=source_balance.user_id,
+            target_id=target_balance.user_id,
             comment="Transfer"
         )
         return trans

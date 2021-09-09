@@ -1,40 +1,17 @@
 from django.db import models
+from django.core import exceptions
 
 from .test_base import BaseTest
-from ..models import User, Balance, Transaction
+from ..models import Balance, Transaction
 
 
 class TestModels(BaseTest):
-    def test_balance_not_deleted_with_user(self):
-        user = self.users[0]
-        balance = Balance.objects.get(user=user)
-        self.assertTrue(balance)
+    def test_balance_not_created_with_negative_amount(self):
+        balance = Balance(balance=-5000, user_id=50)
+        with self.assertRaises(exceptions.ValidationError):
+            balance.clean_fields()
 
-        with self.assertRaises(models.deletion.RestrictedError):
-            user.delete()
-
-        self.assertTrue(User.objects.get(pk=user.id))
-        self.assertTrue(Balance.objects.get(user=user))
-
-    def test_transaction_not_deleted_with_source_or_target(self):
-        user1 = self.users[0]
-        user2 = self.users[1]
-        balance1 = Balance.objects.get(user=user1)
-        balance2 = Balance.objects.get(user=user2)
-
-        balance1.balance += 500
-        balance1.save()
-        balance2.balance += 300
-        balance2.save()
-
-        trans = Transaction.objects.create(source=user1, target=user2, amount=400)
-
-        with self.assertRaises(models.deletion.RestrictedError):
-            user1.delete()
-
-        with self.assertRaises(models.deletion.RestrictedError):
-            user2.delete()
-
-        self.assertTrue(Transaction.objects.get(pk=trans.id))
-        self.assertTrue(Balance.objects.get(pk=user1.id))
-        self.assertTrue(Balance.objects.get(pk=user2.id))
+    def test_transaction_not_created_with_negative_amount(self):
+        trans = Transaction(source_id=self.user_ids[1], target_id=self.user_ids[2], amount=-500)
+        with self.assertRaises(exceptions.ValidationError):
+            trans.clean_fields()

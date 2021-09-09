@@ -1,19 +1,17 @@
 from django.test import TestCase
-from ..models import User, Balance, Transaction
+from ..models import Balance
 
 
 class BaseTest(TestCase):
+    user_ids = []
+
     @classmethod
     def setUpTestData(cls):
-        cls.users = []
-        user = User.objects.create()
-        balance = Balance.objects.create(user=user)
-        cls.users.append(user)
+        balance = Balance.objects.create(user_id=1, balance=100)
+        cls.user_ids.append(balance.user_id)
 
-        user = User.objects.create()
-        balance = Balance.objects.create(user=user, balance=2000)
-        cls.users.append(user)
+        balance = Balance.objects.create(user_id=2, balance=2000)
+        cls.user_ids.append(balance.user_id)
 
-        user = User.objects.create()
-        balance = Balance.objects.create(user=user, balance=500)
-        cls.users.append(user)
+        balance = Balance.objects.create(user_id=3, balance=500)
+        cls.user_ids.append(balance.user_id)
