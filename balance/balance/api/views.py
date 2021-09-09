@@ -21,6 +21,10 @@ from .exceptions import BalanceDoesNotExist
 
 
 class BaseView(APIView):
+    """
+    Base class for views - takes a post request, validates data
+    with the child-specific serializer
+    """
     parser_classes = [JSONParser]
     serializer = BaseSerializer
 

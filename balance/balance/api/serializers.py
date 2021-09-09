@@ -6,13 +6,11 @@ from rest_framework import serializers
 from .models import User, Balance, Transaction
 
 
-class UserSerializer(serializers.ModelSerializer):
-    balance = serializers.DecimalField(max_digits=9, decimal_places=2)
-
-    class Meta:
-        model = User
-        fields = ["id", "created", "balance"]
-
+class MyBaseSerializer(serializers.Serializer):
+    """
+    A Base class for serializers
+    Validates if the data in JSON was wrapped in "data" field
+    """
     def to_internal_value(self, request_data):
         data = request_data.get("data")
         if not data:
@@ -20,6 +18,14 @@ class UserSerializer(serializers.ModelSerializer):
                 'data': ['This field is required.']
             })
         return super().to_internal_value(data)
+
+
+class UserSerializer(serializers.ModelSerializer, MyBaseSerializer):
+    balance = serializers.DecimalField(max_digits=9, decimal_places=2)
+
+    class Meta:
+        model = User
+        fields = ["id", "created", "balance"]
 
     def validate_balance(self, balance):
         if balance < 0:
@@ -73,17 +79,9 @@ class TransactionSerializer(serializers.ModelSerializer):
         }
 
 
-class ChangeBalanceSerializer(serializers.Serializer):
+class ChangeBalanceSerializer(MyBaseSerializer):
     id = serializers.IntegerField()
     amount = serializers.DecimalField(max_digits=9, decimal_places=2)
-
-    def to_internal_value(self, request_data):
-        data = request_data.get("data")
-        if not data:
-            raise serializers.ValidationError({
-                'data': ['This field is required.']
-            })
-        return super().to_internal_value(data)
 
     def update(self, instance: Balance, validated_data):
         instance.balance += validated_data.get("amount")
@@ -98,30 +96,14 @@ class ChangeBalanceSerializer(serializers.Serializer):
         return instance
 
 
-class GetBalanceSerializer(serializers.Serializer):
+class GetBalanceSerializer(MyBaseSerializer):
     id = serializers.IntegerField()
 
-    def to_internal_value(self, request_data):
-        data = request_data.get("data")
-        if not data:
-            raise serializers.ValidationError({
-                'data': ['This field is required.']
-            })
-        return super().to_internal_value(data)
 
-
-class MakeTransferSerializer(serializers.Serializer):
+class MakeTransferSerializer(MyBaseSerializer):
     source_id = serializers.IntegerField()
     target_id = serializers.IntegerField()
     amount = serializers.DecimalField(max_digits=9, decimal_places=2)
-
-    def to_internal_value(self, request_data):
-        data = request_data.get("data")
-        if not data:
-            raise serializers.ValidationError({
-                'data': ['This field is required.']
-            })
-        return super().to_internal_value(data)
 
     def validate_amount(self, amount):
         if amount < 0:
