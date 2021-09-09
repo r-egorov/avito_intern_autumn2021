@@ -7,9 +7,38 @@ from .models import User, Balance, Transaction
 
 
 class UserSerializer(serializers.ModelSerializer):
+    balance = serializers.DecimalField(max_digits=9, decimal_places=2)
+
     class Meta:
         model = User
-        fields = ["id", "created"]
+        fields = ["id", "created", "balance"]
+
+    def to_internal_value(self, request_data):
+        data = request_data.get("data")
+        if not data:
+            raise serializers.ValidationError({
+                'data': ['This field is required.']
+            })
+        return super().to_internal_value(data)
+
+    def validate_balance(self, balance):
+        if balance < 0:
+            raise serializers.ValidationError('Can\'t be negative.')
+        return balance
+
+    def create(self, validated_data):
+        balance = validated_data.pop("balance")
+        user = User.objects.create()
+        Balance.objects.create(user=user, balance=balance)
+        return user
+
+    def to_representation(self, instance):
+        return {
+            "data": {
+                "id": instance.id,
+                "created": instance.created
+            }
+        }
 
 
 class BalanceSerializer(serializers.ModelSerializer):
@@ -36,8 +65,8 @@ class TransactionSerializer(serializers.ModelSerializer):
         return {
             "data": {
                 "amount": instance.amount,
-                "source_id": instance.source,
-                "target_id": instance.target,
+                "source_id": instance.source.id,
+                "target_id": instance.target.id,
                 "comment": instance.comment,
                 "timestamp": instance.timestamp
             }
@@ -69,24 +98,6 @@ class ChangeBalanceSerializer(serializers.Serializer):
         return instance
 
 
-class CreateUserSerializer(serializers.Serializer):
-    balance = serializers.DecimalField(max_digits=9, decimal_places=2)
-
-    def to_internal_value(self, request_data):
-        data = request_data.get("data")
-        if not data:
-            raise serializers.ValidationError({
-                'data': ['This field is required.']
-            })
-        return super().to_internal_value(data)
-
-    def validate_balance(self, balance):
-        if balance < 0:
-            raise serializers.ValidationError('Can\'t be negative.')
-        return balance
-
-
-
 class GetBalanceSerializer(serializers.Serializer):
     id = serializers.IntegerField()
 
@@ -116,5 +127,3 @@ class MakeTransferSerializer(serializers.Serializer):
         if amount < 0:
             raise serializers.ValidationError('Can\'t be negative.')
         return amount
-
-

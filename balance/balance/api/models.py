@@ -4,7 +4,6 @@ from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 
 from typing import Dict
-from decimal import Decimal
 
 
 class User(models.Model):

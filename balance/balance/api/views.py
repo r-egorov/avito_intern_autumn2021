@@ -1,125 +1,132 @@
+from abc import abstractmethod
+from typing import List
+from decimal import Decimal
+
 from django.core import exceptions
 
 from django.db import transaction
 from django.utils import timezone
 
 from rest_framework import status
+from rest_framework.serializers import BaseSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import JSONParser
 
 from .serializers import UserSerializer, BalanceSerializer, \
     ChangeBalanceSerializer, GetBalanceSerializer, \
-    MakeTransferSerializer, CreateUserSerializer
-from .models import User, Balance, Transaction
+    MakeTransferSerializer, TransactionSerializer
+from .models import Balance, Transaction
+from .exceptions import BalanceDoesNotExist
 
 
-class CreateUser(APIView):
-    resource_name = "create_user"
+class BaseView(APIView):
     parser_classes = [JSONParser]
+    serializer = BaseSerializer
 
     @transaction.atomic()
     def post(self, request) -> Response:
-        serializer = CreateUserSerializer(data=request.data)
-        if serializer.is_valid():
-            user = User.objects.create()
-
-            balance_amount = serializer.validated_data.get("balance")
-            balance = Balance.objects.create(user=user, balance=balance_amount)
-
-            return Response(UserSerializer(user).data,
-                            status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ChangeBalance(APIView):
-    resource_name = "change_balance"
-    parser_classes = [JSONParser]
-
-    @transaction.atomic()
-    def post(self, request) -> Response:
-        serializer = ChangeBalanceSerializer(data=request.data)
+        errors = {}
+        serializer = self.serializer(data=request.data)
         if not serializer.is_valid():
-            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            errors["errors"] = serializer.errors
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        return self.handler(serializer)
 
-        uid = serializer.data.get("id")
+    @abstractmethod
+    def handler(self, serializer):
+        pass
 
-        try:
-            balance = Balance.objects.get(user=uid)
-        except Balance.DoesNotExist:
-            return Response({"errors": {"id": ["No user with such ID found"]}},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        serializer.update(balance, serializer.validated_data)
-
-        amount = serializer.validated_data.get("amount")
-        comment = "Deposit" if amount > 0 else "Withdrawal"
-        user = balance.user
-        trans = Transaction.objects.create(
-            amount=abs(amount), source=user, target=user, comment=comment
-        )
-
-        return Response(BalanceSerializer(balance).data,
-                        status=status.HTTP_200_OK)
-
-
-class GetBalance(APIView):
-    resource_name = "get_balance"
-
-    def post(self, request) -> Response:
-        serializer = GetBalanceSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response({"errors": serializer.errors},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        uid = serializer.data.get("id")
-
-        try:
-            balance = Balance.objects.get(user=uid)
-        except Balance.DoesNotExist:
-            return Response({"errors": {"id": ["No user with such ID found"]}},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        return Response(BalanceSerializer(balance).data, status=status.HTTP_200_OK)
-
-
-class MakeTransfer(APIView):
-    resource_name = "make-transfer"
-
-    @transaction.atomic()
-    def post(self, request) -> Response:
-        serializer = MakeTransferSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response({"errors": serializer.errors},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        ids = {
-            "source_id": serializer.data.get("source_id"),
-            "target_id": serializer.data.get("target_id")
-        }
+    @staticmethod
+    def get_balances(serializer, *args: str) -> List[Balance]:
+        """
+        Takes names of user_id-fields in JSON as arguments,
+        returns a list of Balance-instances for these users
+        :param serializer - a serializer needed for processing JSON
+        :param args: strings - names of fields in JSON
+        :return: list of Balance instances, None if no user found
+        """
+        ids = {}
         balances = []
+
+        for field_name in args:
+            ids[field_name] = serializer.data.get(field_name)
 
         for key in ids:
             try:
                 balances.append(Balance.objects.get(user=ids[key]))
             except Balance.DoesNotExist:
-                return Response({"errors": {key: ["No user with such ID found"]}},
-                                status=status.HTTP_404_NOT_FOUND)
+                raise BalanceDoesNotExist(key)
+        return balances
 
-        source_balance = balances[0]
-        target_balance = balances[1]
+
+class CreateUser(BaseView):
+    serializer = UserSerializer
+    resource_name = "create_user"
+
+    @transaction.atomic()
+    def handler(self, serializer) -> Response:
+        serializer.save()
+        return Response(serializer.data,
+                        status=status.HTTP_201_CREATED)
+
+
+class ChangeBalance(BaseView):
+    serializer = ChangeBalanceSerializer
+    resource_name = "change_balance"
+
+    @staticmethod
+    def do_transaction(serializer, user):
         amount = serializer.validated_data.get("amount")
+        comment = "Deposit" if amount > 0 else "Withdrawal"
+        Transaction.objects.create(
+            amount=abs(amount), source=user, target=user, comment=comment
+        )
 
+    @transaction.atomic()
+    def handler(self, serializer) -> Response:
+        payload = {}
+        http_status = status.HTTP_200_OK
+
+        try:
+            balance = self.get_balances(serializer, "id")[0]
+            serializer.update(balance, serializer.validated_data)
+            self.do_transaction(serializer, balance.user)
+            payload = BalanceSerializer(balance).data
+        except BalanceDoesNotExist as e:
+            http_status = status.HTTP_404_NOT_FOUND
+            payload = {"errors": {e.field_name: ["No user with such ID found"]}}
+
+        return Response(payload, status=http_status)
+
+
+class GetBalance(BaseView):
+    serializer = GetBalanceSerializer
+    resource_name = "get_balance"
+
+    def handler(self, serializer) -> Response:
+        payload = {}
+        http_status = status.HTTP_200_OK
+
+        try:
+            balance = self.get_balances(serializer, "id")[0]
+            payload = BalanceSerializer(balance).data
+        except BalanceDoesNotExist as e:
+            http_status = status.HTTP_404_NOT_FOUND
+            payload = {"errors": {e.field_name: ["No user with such ID found"]}}
+
+        return Response(payload, status=http_status)
+
+
+class MakeTransfer(BaseView):
+    serializer = MakeTransferSerializer
+    resource_name = "make-transfer"
+
+    @staticmethod
+    def do_transaction(source_balance, target_balance, amount: Decimal):
         source_balance.balance -= amount
         source_balance.last_update = timezone.now()
-        try:
-            source_balance.clean_fields()
-        except exceptions.ValidationError:
-            return Response({"errors": {
-                "source_id": ["This balance would be negative after the transfer"]
-            }},
-                status=status.HTTP_400_BAD_REQUEST)
+        source_balance.clean_fields()
 
         target_balance.balance += amount
         target_balance.last_update = timezone.now()
@@ -133,5 +140,25 @@ class MakeTransfer(APIView):
             target=target_balance.user,
             comment="Transfer"
         )
+        return trans
 
-        return Response({"status": "OK"}, status=status.HTTP_200_OK)
+    @transaction.atomic()
+    def handler(self, serializer) -> Response:
+        payload = {}
+        http_status = status.HTTP_200_OK
+
+        try:
+            balances = self.get_balances(serializer, "source_id", "target_id")
+            amount = serializer.validated_data.get("amount")
+            trans = self.do_transaction(balances[0], balances[1], amount)
+            payload = TransactionSerializer(trans).data
+        except BalanceDoesNotExist as e:
+            payload = {"errors": {e.field_name: ["No user with such ID found"]}}
+            http_status = status.HTTP_404_NOT_FOUND
+        except exceptions.ValidationError:
+            payload = {
+                "errors": {"source_id": ["This balance would be negative after the transfer"]}
+            }
+            http_status = status.HTTP_400_BAD_REQUEST
+
+        return Response(payload, status=http_status)
