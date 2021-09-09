@@ -214,6 +214,7 @@ class GetTransactions(BaseView):
         payload = {}
         user_id = serializer.validated_data.get("user_id")
         sort_by = serializer.validated_data.get("sort_by")
+        http_status = status.HTTP_200_OK
 
         if sort_by == "amount":
             trans_query = Transaction.objects.filter(source_id=user_id).order_by("amount")
@@ -223,6 +224,7 @@ class GetTransactions(BaseView):
             payload["errors"] = {
                 "sort_by": ["Can be either 'amount' or 'date'"]
             }
+            http_status = status.HTTP_400_BAD_REQUEST
 
         if not payload.get("errors"):
             page = self.paginate_queryset(trans_query)
@@ -233,4 +235,4 @@ class GetTransactions(BaseView):
                 serializer = TransactionSerializer(trans_query, many=True)
             payload["data"] = serializer.data
 
-        return Response(payload, status=status.HTTP_200_OK)
+        return Response(payload, status=http_status)
