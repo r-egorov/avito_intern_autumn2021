@@ -18,7 +18,7 @@ from .serializers import BalanceSerializer, \
     MakeTransferSerializer, TransactionSerializer, \
     GetTransactionsSerializer
 from .models import Balance, Transaction
-from .exceptions import BalanceDoesNotExist
+from .exceptions import BalanceDoesNotExist, InvalidSortField
 from .pagination import BasicPagination
 
 
@@ -210,29 +210,41 @@ class GetTransactions(BaseView):
         assert self.paginator is not None
         return self.paginator.get_paginated_response(data)
 
+    @staticmethod
+    def validate_sort_by_field(sort_by: str) -> str:
+        res: str = sort_by
+
+        if sort_by == "amount":
+            return sort_by
+        if sort_by == "date":
+            return "-timestamp"
+        raise InvalidSortField
+
     def handler(self, serializer) -> Response:
         payload = {}
         user_id = serializer.validated_data.get("user_id")
         sort_by = serializer.validated_data.get("sort_by")
         http_status = status.HTTP_200_OK
 
-        if sort_by == "amount":
-            trans_query = Transaction.objects.filter(source_id=user_id).order_by("amount")
-        elif sort_by == "date":
-            trans_query = Transaction.objects.filter(source_id=user_id).order_by("-timestamp")
-        else:
+        try:
+            sort_by = self.validate_sort_by_field(sort_by)
+            balance: Balance = self.get_balances(serializer, "user_id")[0]
+            trans_query = Transaction.objects.filter(source_id=user_id).order_by(sort_by)
+            page = self.paginate_queryset(trans_query)
+            if page is not None:
+                serializer = self.get_paginated_response(
+                    TransactionSerializer(page, many=True).data
+                )
+            else:
+                serializer = TransactionSerializer(trans_query, many=True)
+            payload["data"] = serializer.data
+        except InvalidSortField:
             payload["errors"] = {
                 "sort_by": ["Can be either 'amount' or 'date'"]
             }
             http_status = status.HTTP_400_BAD_REQUEST
-
-        if not payload.get("errors"):
-            page = self.paginate_queryset(trans_query)
-            if page is not None:
-                serializer = self.get_paginated_response(TransactionSerializer(page,
-                                                                               many=True).data)
-            else:
-                serializer = TransactionSerializer(trans_query, many=True)
-            payload["data"] = serializer.data
+        except BalanceDoesNotExist as e:
+            payload["errors"] = {e.field_name: ["No user with such ID found"]}
+            http_status = status.HTTP_404_NOT_FOUND
 
         return Response(payload, status=http_status)

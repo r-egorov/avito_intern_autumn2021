@@ -436,3 +436,83 @@ class TestViews(BaseTest):
 
         updated_balance1 = Balance.objects.get(user_id=self.user_ids[1])
         self.assertEqual(initial_balance1.balance - updated_balance1.balance, 1000)
+
+    def test_get_transactions_no_data_field(self):
+        """
+        Has to return 400 BAD REQUEST HTTP-response
+        """
+        payload = {
+            "daata": {
+                "user_id": 1,
+                "sort_by": "date"
+            }
+        }
+        payload = json.dumps(payload)
+        res = self.client.post(reverse("get-transactions"),
+                               data=payload,
+                               content_type="application/json")
+        self.assertEqual(res.status_code, 400)
+
+    def test_get_transactions_no_user_id_field(self):
+        """
+        Has to return 400 BAD REQUEST HTTP-response
+        """
+        payload = {
+            "data": {
+                "usser_id": 1,
+                "sort_by": "date"
+            }
+        }
+        payload = json.dumps(payload)
+        res = self.client.post(reverse("get-transactions"),
+                               data=payload,
+                               content_type="application/json")
+        self.assertEqual(res.status_code, 400)
+
+    def test_get_transactions_no_sort_by_field(self):
+        """
+        Has to return 400 BAD REQUEST HTTP-response
+        """
+        payload = {
+            "data": {
+                "user_id": 1,
+                "sortt_by": "date"
+            }
+        }
+        payload = json.dumps(payload)
+        res = self.client.post(reverse("get-transactions"),
+                               data=payload,
+                               content_type="application/json")
+        self.assertEqual(res.status_code, 400)
+
+    def test_get_transactions_invalid_sort_by_field(self):
+        """
+        Has to return 400 BAD REQUEST HTTP-response
+        """
+        payload = {
+            "data": {
+                "user_id": 1,
+                "sort_by": "ddate"
+            }
+        }
+        payload = json.dumps(payload)
+        res = self.client.post(reverse("get-transactions"),
+                               data=payload,
+                               content_type="application/json")
+        self.assertEqual(res.status_code, 400)
+
+    def test_get_transactions_no_such_user(self):
+        """
+        Has to return 400 BAD REQUEST HTTP-response
+        """
+        payload = {
+            "data": {
+                "user_id": 1432,
+                "sort_by": "date"
+            }
+        }
+        payload = json.dumps(payload)
+        res = self.client.post(reverse("get-transactions"),
+                               data=payload,
+                               content_type="application/json")
+        self.assertEqual(res.status_code, 404)

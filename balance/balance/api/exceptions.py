@@ -8,3 +8,11 @@ class BalanceDoesNotExist(Balance.DoesNotExist):
     """
     def __init__(self, field_name):
         self.field_name = field_name
+
+
+class InvalidSortField(Exception):
+    """
+    An exception raised when `sort_by` field in get-transactions request
+    is not `amount` or `date`
+    """
+    pass
