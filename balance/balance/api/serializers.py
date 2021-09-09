@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.utils import timezone
 from django.core import exceptions
 
@@ -27,18 +29,18 @@ class UserSerializer(serializers.ModelSerializer, MyBaseSerializer):
         model = User
         fields = ["id", "created", "balance"]
 
-    def validate_balance(self, balance):
+    def validate_balance(self, balance: Decimal) -> Decimal:
         if balance < 0:
             raise serializers.ValidationError('Can\'t be negative.')
         return balance
 
-    def create(self, validated_data):
-        balance = validated_data.pop("balance")
+    def create(self, validated_data) -> User:
+        balance: Decimal = validated_data.pop("balance")
         user = User.objects.create()
         Balance.objects.create(user=user, balance=balance)
         return user
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: User):
         return {
             "data": {
                 "id": instance.id,
@@ -52,7 +54,7 @@ class BalanceSerializer(serializers.ModelSerializer):
         model = Balance
         fields = ["balance", "user", "last_update"]
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: Balance):
         return {
             "data": {
                 "user_id": instance.user.id,
@@ -67,7 +69,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         model = Transaction
         fields = ["amount", "source", "target", "comment", "timestamp"]
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: Transaction):
         return {
             "data": {
                 "amount": instance.amount,
@@ -105,7 +107,7 @@ class MakeTransferSerializer(MyBaseSerializer):
     target_id = serializers.IntegerField()
     amount = serializers.DecimalField(max_digits=9, decimal_places=2)
 
-    def validate_amount(self, amount):
+    def validate_amount(self, amount: Decimal) -> Decimal:
         if amount < 0:
             raise serializers.ValidationError('Can\'t be negative.')
         return amount
