@@ -219,7 +219,7 @@ class GetTransactions(BaseView):
         if sort_by == "amount":
             trans_query = Transaction.objects.filter(source_id=user_id).order_by("amount")
         elif sort_by == "date":
-            trans_query = Transaction.objects.filter(source_id=user_id).order_by("timestamp")
+            trans_query = Transaction.objects.filter(source_id=user_id).order_by("-timestamp")
         else:
             payload["errors"] = {
                 "sort_by": ["Can be either 'amount' or 'date'"]
