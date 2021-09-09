@@ -15,9 +15,11 @@ from rest_framework.parsers import JSONParser
 
 from .serializers import BalanceSerializer, \
     ChangeBalanceSerializer, GetBalanceSerializer, \
-    MakeTransferSerializer, TransactionSerializer
+    MakeTransferSerializer, TransactionSerializer, \
+    GetTransactionsSerializer
 from .models import Balance, Transaction
 from .exceptions import BalanceDoesNotExist
+from .pagination import BasicPagination
 
 
 class BaseView(APIView):
@@ -181,3 +183,54 @@ class MakeTransfer(BaseView):
 
         return Response(payload, status=http_status)
 
+
+class GetTransactions(BaseView):
+    serializer = GetTransactionsSerializer
+    pagination_class = BasicPagination
+    resource_name = "get_transactions"
+
+    @property
+    def paginator(self):
+        if not hasattr(self, '_paginator'):
+            if self.pagination_class is None:
+                self._paginator = None
+            else:
+                self._paginator = self.pagination_class()
+        else:
+            pass
+        return self._paginator
+
+    def paginate_queryset(self, queryset):
+        if self.paginator is None:
+            return None
+        return self.paginator.paginate_queryset(queryset,
+                                                self.request, view=self)
+
+    def get_paginated_response(self, data):
+        assert self.paginator is not None
+        return self.paginator.get_paginated_response(data)
+
+    def handler(self, serializer) -> Response:
+        payload = {}
+        user_id = serializer.validated_data.get("user_id")
+        sort_by = serializer.validated_data.get("sort_by")
+
+        if sort_by == "amount":
+            trans_query = Transaction.objects.filter(source_id=user_id).order_by("amount")
+        elif sort_by == "date":
+            trans_query = Transaction.objects.filter(source_id=user_id).order_by("timestamp")
+        else:
+            payload["errors"] = {
+                "sort_by": ["Can be either 'amount' or 'date'"]
+            }
+
+        if not payload.get("errors"):
+            page = self.paginate_queryset(trans_query)
+            if page is not None:
+                serializer = self.get_paginated_response(TransactionSerializer(page,
+                                                                               many=True).data)
+            else:
+                serializer = TransactionSerializer(trans_query, many=True)
+            payload["data"] = serializer.data
+
+        return Response(payload, status=status.HTTP_200_OK)
