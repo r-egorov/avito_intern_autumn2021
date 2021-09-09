@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List
+from typing import List, Dict
 from decimal import Decimal
 
 from django.core import exceptions
@@ -16,7 +16,7 @@ from rest_framework.parsers import JSONParser
 from .serializers import UserSerializer, BalanceSerializer, \
     ChangeBalanceSerializer, GetBalanceSerializer, \
     MakeTransferSerializer, TransactionSerializer
-from .models import Balance, Transaction
+from .models import User, Balance, Transaction
 from .exceptions import BalanceDoesNotExist
 
 
@@ -34,17 +34,18 @@ class BaseView(APIView):
         return self.handler(serializer)
 
     @abstractmethod
-    def handler(self, serializer):
+    def handler(self, serializer) -> Response:
         pass
 
     @staticmethod
-    def get_balances(serializer, *args: str) -> List[Balance]:
+    def get_balances(serializer: BaseSerializer, *args: str) -> List[Balance]:
         """
         Takes names of user_id-fields in JSON as arguments,
-        returns a list of Balance-instances for these users
+        returns a list of Balance-instances for these users.
+        Raises BalanceDoesNotExist if no balance found.
         :param serializer - a serializer needed for processing JSON
         :param args: strings - names of fields in JSON
-        :return: list of Balance instances, None if no user found
+        :return: list of Balance instances
         """
         ids = {}
         balances = []
@@ -66,9 +67,12 @@ class CreateUser(BaseView):
 
     @transaction.atomic()
     def handler(self, serializer) -> Response:
+        payload = {}
+        http_status = status.HTTP_200_OK
+
         serializer.save()
-        return Response(serializer.data,
-                        status=status.HTTP_201_CREATED)
+        payload = serializer.data
+        return Response(payload, status=http_status)
 
 
 class ChangeBalance(BaseView):
@@ -76,8 +80,13 @@ class ChangeBalance(BaseView):
     resource_name = "change_balance"
 
     @staticmethod
-    def do_transaction(serializer, user):
-        amount = serializer.validated_data.get("amount")
+    def do_transaction(user: User, amount: Decimal):
+        """
+        Takes a User-instance and creates a Transaction-instance
+        with the amount
+        :param user: User-instance
+        :param amount: Decimal - amount of Transaction
+        """
         comment = "Deposit" if amount > 0 else "Withdrawal"
         Transaction.objects.create(
             amount=abs(amount), source=user, target=user, comment=comment
@@ -89,9 +98,10 @@ class ChangeBalance(BaseView):
         http_status = status.HTTP_200_OK
 
         try:
-            balance = self.get_balances(serializer, "id")[0]
+            balance: Balance = self.get_balances(serializer, "id")[0]
             serializer.update(balance, serializer.validated_data)
-            self.do_transaction(serializer, balance.user)
+            self.do_transaction(balance.user,
+                                serializer.validated_data.get("amount"))
             payload = BalanceSerializer(balance).data
         except BalanceDoesNotExist as e:
             http_status = status.HTTP_404_NOT_FOUND
@@ -109,7 +119,7 @@ class GetBalance(BaseView):
         http_status = status.HTTP_200_OK
 
         try:
-            balance = self.get_balances(serializer, "id")[0]
+            balance: Balance = self.get_balances(serializer, "id")[0]
             payload = BalanceSerializer(balance).data
         except BalanceDoesNotExist as e:
             http_status = status.HTTP_404_NOT_FOUND
@@ -123,7 +133,18 @@ class MakeTransfer(BaseView):
     resource_name = "make-transfer"
 
     @staticmethod
-    def do_transaction(source_balance, target_balance, amount: Decimal):
+    def do_transaction(source_balance: Balance,
+                       target_balance: Balance,
+                       amount: Decimal) -> Transaction:
+        """
+        Takes two Balance-instances, transfers amount from source to target.
+        Raises exception if source becomes negative.
+        Returns a Transaction-instance.
+        :param source_balance: Balance instance to transfer from
+        :param target_balance: Balance instance to transfer to
+        :param amount: Decimal - amount to transfer
+        :return: Transaction instance
+        """
         source_balance.balance -= amount
         source_balance.last_update = timezone.now()
         source_balance.clean_fields()
@@ -148,9 +169,9 @@ class MakeTransfer(BaseView):
         http_status = status.HTTP_200_OK
 
         try:
-            balances = self.get_balances(serializer, "source_id", "target_id")
-            amount = serializer.validated_data.get("amount")
-            trans = self.do_transaction(balances[0], balances[1], amount)
+            balances: List[Balance] = self.get_balances(serializer, "source_id", "target_id")
+            amount: Decimal = serializer.validated_data.get("amount")
+            trans: Transaction = self.do_transaction(balances[0], balances[1], amount)
             payload = TransactionSerializer(trans).data
         except BalanceDoesNotExist as e:
             payload = {"errors": {e.field_name: ["No user with such ID found"]}}
