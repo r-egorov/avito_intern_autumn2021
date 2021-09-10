@@ -14,7 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, re_path
 
 from .api import views
 
@@ -23,5 +23,6 @@ urlpatterns = [
     path("api/change-balance/", views.ChangeBalance.as_view(), name="change-balance"),
     path("api/get-balance/<int:user_id>/", views.GetBalance.as_view(), name="get-balance"),
     path("api/make-transfer/", views.MakeTransfer.as_view(), name="make-transfer"),
-    path("api/get-transactions/", views.GetTransactions.as_view(), name="get-transactions")
+    re_path(r"^api/get-transactions/(?P<user_id>\d+)/(?:sort_by=(?P<sort_by>\w+)/)?$",
+            views.GetTransactions.as_view(), name="get-transactions")
 ]

@@ -101,6 +101,7 @@ class ChangeBalance(BaseView):
             else:
                 user_id = serializer.validated_data.get("user_id")
                 balance = Balance.objects.create(balance=amount, user_id=user_id)
+                self.do_transaction(balance.user_id, amount)
                 balance_serializer = BalanceSerializer(balance)
                 payload["data"] = balance_serializer.data
                 http_status = status.HTTP_201_CREATED
@@ -118,7 +119,7 @@ class GetBalance(APIView):
 
         try:
             balance: Balance = Balance.objects.get(user_id=user_id)
-            payload["data"] = BalanceSerializer(balance).data
+            payload["data"] = self.serializer(balance).data
         except Balance.DoesNotExist:
             http_status = status.HTTP_404_NOT_FOUND
             payload["errors"] = {"user_id": ["No user with such ID found"]}
@@ -183,8 +184,8 @@ class MakeTransfer(BaseView):
         return Response(payload, status=http_status)
 
 
-class GetTransactions(BaseView):
-    serializer = GetTransactionsSerializer
+class GetTransactions(APIView):
+    serializer = TransactionSerializer
     pagination_class = BasicPagination
     resource_name = "get_transactions"
 
@@ -211,23 +212,19 @@ class GetTransactions(BaseView):
 
     @staticmethod
     def validate_sort_by_field(sort_by: str) -> str:
-        res: str = sort_by
-
         if sort_by == "amount":
             return sort_by
         if sort_by == "date":
             return "-timestamp"
         raise InvalidSortField
 
-    def handler(self, serializer) -> Response:
+    def get(self, request, user_id: int, sort_by: str = "date") -> Response:
         payload = {}
-        user_id = serializer.validated_data.get("user_id")
-        sort_by = serializer.validated_data.get("sort_by")
         http_status = status.HTTP_200_OK
 
         try:
             sort_by = self.validate_sort_by_field(sort_by)
-            balance: Balance = self.get_balances(serializer, "user_id")[0]
+            Balance.objects.get(user_id=user_id)
             trans_query = Transaction.objects.filter(source_id=user_id).order_by(sort_by)
             page = self.paginate_queryset(trans_query)
             if page is not None:
@@ -242,8 +239,8 @@ class GetTransactions(BaseView):
                 "sort_by": ["Can be either 'amount' or 'date'"]
             }
             http_status = status.HTTP_400_BAD_REQUEST
-        except BalanceDoesNotExist as e:
-            payload["errors"] = {e.field_name: ["No user with such ID found"]}
+        except Balance.DoesNotExist:
+            payload["errors"] = {"user_id": ["No user with such ID found"]}
             http_status = status.HTTP_404_NOT_FOUND
 
         return Response(payload, status=http_status)
