@@ -16,3 +16,10 @@ class InvalidSortField(Exception):
     is not `amount` or `date`
     """
     pass
+
+class ConvertResultNone(Exception):
+    """
+    An exception raised when the result of currency conversion
+    is None
+    """
+    pass

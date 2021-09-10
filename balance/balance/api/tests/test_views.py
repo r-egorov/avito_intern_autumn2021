@@ -23,6 +23,17 @@ class TestViews(BaseTest):
         data = res.data.get("data")
         self.assertEqual(data.get("balance"), 2000)
 
+    def test_get_balance_invalid_currency(self):
+        """
+        Has to return 200 OK HTTP-response and the RUB balance of the user
+        """
+        user_id = self.user_ids[1]
+        res = self.client.get(f"/api/get-balance/{user_id}/currency=BDSS/")
+        self.assertEqual(res.status_code, 200)
+        data = res.json().get("data")
+        currency = data.get("currency")
+        self.assertEqual(currency, "RUB")
+
     def test_change_balance_no_data_field(self):
         """
         Has to return 400 BAD REQUEST HTTP-response,

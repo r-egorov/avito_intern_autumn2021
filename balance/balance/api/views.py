@@ -1,3 +1,6 @@
+import requests
+from requests.exceptions import Timeout, ConnectionError
+
 from abc import abstractmethod
 from typing import List, Dict
 from decimal import Decimal
@@ -17,7 +20,8 @@ from .serializers import BalanceSerializer, \
     ChangeBalanceSerializer, MakeTransferSerializer, \
     TransactionSerializer
 from .models import Balance, Transaction
-from .exceptions import BalanceDoesNotExist, InvalidSortField
+from .exceptions import BalanceDoesNotExist, InvalidSortField, \
+    ConvertResultNone
 from .pagination import BasicPagination
 
 
@@ -113,16 +117,41 @@ class GetBalance(APIView):
     serializer = BalanceSerializer
     resource_name = "get_balance"
 
-    def get(self, request, user_id) -> Response:
+    @staticmethod
+    def convert_currency(amount: Decimal, convert_to: str):
+        payload = {
+            "from": "RUB",
+            "to": convert_to,
+            "amount": amount
+        }
+        response = requests.get("https://api.exchangerate.host/convert",
+                                params=payload, timeout=(2, 5))
+        print(response)
+        response = (response.json())
+        result = response.get("result")
+        if result is None:
+            raise ConvertResultNone
+        return result
+
+    def get(self, request, user_id, currency="RUB") -> Response:
         payload = {}
         http_status = status.HTTP_200_OK
 
         try:
             balance: Balance = Balance.objects.get(user_id=user_id)
             payload["data"] = self.serializer(balance).data
+            payload["data"]["currency"] = "RUB"
+
+            if currency != "RUB":
+                amount = self.convert_currency(balance.balance, currency)
+                payload["data"]["currency"] = currency
+                payload["data"]["balance"] = amount
+
         except Balance.DoesNotExist:
             http_status = status.HTTP_404_NOT_FOUND
             payload["errors"] = {"user_id": ["No user with such ID found"]}
+        except (ConvertResultNone, Timeout, ConnectionError):
+            pass
 
         return Response(payload, status=http_status)
 
