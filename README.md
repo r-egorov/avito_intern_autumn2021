@@ -3,9 +3,9 @@
 
 Сервис предоставляет JSON API по следующим URL:
 - **POST** `api/change-balance/` - метод изменения баланса пользователя
-- **GET** `api/get-balance/<int:user_id>` - метод получения баланса пользователя
+- **GET** `api/get-balance/<int:user_id>/[currency=<str:currency>/]` - метод получения баланса пользователя
 - **POST** `api/make-transfer/` - метод перевода средств между пользователями
-- **GET** `api/get-transactions/<int:user_id>/[sort_by=date|amount/]` - метод получения списка операций пользователя
+- **GET** `api/get-transactions/<int:user_id>/[sort_by=<str:sort_by>/]` - метод получения списка операций пользователя
 
 ## Использованные технологии
 Так как Golang я начал изучать совсем недавно, я выбрал технологии, с которыми я уже работал.
@@ -79,7 +79,7 @@ docker exec uwsgi-nginx sh -c "python manage.py test"
   
   **Метод получения баланса пользователя**
   
-  Принимает `user_id` пользователя.
+  Принимает `user_id` пользователя, а также опциональный параметр `currency` - код валюты, в которую нужно конвертировать баланс.
   
   ```
   GET api/get-balance/<int:user_id> -> GetBalanceOut
@@ -88,6 +88,7 @@ docker exec uwsgi-nginx sh -c "python manage.py test"
     user_id int
     balance float
     last_update datetime
+    currency str
   }
   ```
   

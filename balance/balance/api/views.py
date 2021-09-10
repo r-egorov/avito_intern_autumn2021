@@ -118,7 +118,7 @@ class GetBalance(APIView):
     resource_name = "get_balance"
 
     @staticmethod
-    def convert_currency(amount: Decimal, convert_to: str):
+    def convert_currency(amount: Decimal, convert_to: str) -> Decimal:
         payload = {
             "from": "RUB",
             "to": convert_to,
@@ -126,30 +126,30 @@ class GetBalance(APIView):
         }
         response = requests.get("https://api.exchangerate.host/convert",
                                 params=payload, timeout=(2, 5))
-        print(response)
         response = (response.json())
         result = response.get("result")
         if result is None:
             raise ConvertResultNone
-        return result
+        return Decimal(round(result, 2))
 
-    def get(self, request, user_id, currency="RUB") -> Response:
-        payload = {}
+    def get(self, request, user_id: int, currency: str = "RUB") -> Response:
+        data = {"currency": "RUB"}
+        payload = {"data": data}
         http_status = status.HTTP_200_OK
 
         try:
             balance: Balance = Balance.objects.get(user_id=user_id)
-            payload["data"] = self.serializer(balance).data
-            payload["data"]["currency"] = "RUB"
+            payload["data"].update(self.serializer(balance).data)
 
             if currency != "RUB":
-                amount = self.convert_currency(balance.balance, currency)
-                payload["data"]["currency"] = currency
-                payload["data"]["balance"] = amount
+                amount: Decimal = self.convert_currency(balance.balance,
+                                                        currency)
+                data["balance"] = amount
+                data["currency"] = currency
 
         except Balance.DoesNotExist:
             http_status = status.HTTP_404_NOT_FOUND
-            payload["errors"] = {"user_id": ["No user with such ID found"]}
+            payload = {"errors": {"user_id": ["No user with such ID found"]}}
         except (ConvertResultNone, Timeout, ConnectionError):
             pass
 
