@@ -17,7 +17,7 @@ services:
             - app-network
         volumes:
             - ./db/scripts:/docker-entrypoint-initdb.d/
-              #- ./db/data:/var/lib/postgresql/data
+            - ./db/data:/var/lib/postgresql/data
 
     uwsgi:
         container_name: uwsgi-nginx
