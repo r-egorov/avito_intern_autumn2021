@@ -9,12 +9,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2&y5gutps1=^w8999hp8-4yjbi!m2y!67-u@7(urx3*eats)v7'
+SECRET_KEY = os.environ["SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["0.0.0.0"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "0.0.0.0", "192.168.99.108"]
 
 
 # Application definition
@@ -69,13 +69,10 @@ WSGI_APPLICATION = 'balance.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        # 'NAME': os.environ["APP_DB"],
-        # 'USER': os.environ["APP_DB_USER"],
-        # 'PASSWORD': os.environ["APP_DB_PASS"],
-        'NAME': "balance",
-        'USER': "cisis",
-        'PASSWORD': "cisis",
-        'HOST': "192.168.99.108",
+        'NAME': os.environ["APP_DB"],
+        'USER': os.environ["APP_DB_USER"],
+        'PASSWORD': os.environ["APP_DB_PASS"],
+        'HOST': os.environ["POSTGRES_HOST"],
         'PORT': '5432'
     }
 }

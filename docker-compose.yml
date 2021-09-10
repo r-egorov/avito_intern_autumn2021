@@ -19,6 +19,25 @@ services:
             - ./db/scripts:/docker-entrypoint-initdb.d/
               #- ./db/data:/var/lib/postgresql/data
 
+    uwsgi:
+        container_name: uwsgi-nginx
+        restart: unless-stopped
+        depends_on:
+            - postgres
+        build:
+            context: ./balance/
+        image: uwsgi-nginx
+        ports:
+            - 8000:8000
+        networks:
+            - app-network
+        environment:
+            - APP_DB_USER=${APP_USER}
+            - APP_DB_PASS=${APP_USER_PASSWORD}
+            - APP_DB=${APP_DB}
+            - POSTGRES_HOST=${POSTGRES_HOST}
+            - SECRET_KEY=${SECRET_KEY}
+
 networks:
     app-network:
         driver: bridge
