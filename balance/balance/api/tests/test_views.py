@@ -7,64 +7,18 @@ from ..models import Balance, Transaction
 
 
 class TestViews(BaseTest):
-    def test_get_balance_no_data_field(self):
-        """
-        Has to return 400 BAD REQUEST HTTP-response
-        """
-        payload = {
-            "daata": {
-                "user_id": 12
-            }
-        }
-        payload = json.dumps(payload)
-        res = self.client.post(reverse("get-balance"),
-                               data=payload,
-                               content_type="application/json")
-        self.assertEqual(res.status_code, 400)
-
-    def test_get_balance_no_user_id_field(self):
-        """
-        Has to return 400 BAD REQUEST HTTP-response
-        """
-        payload = {
-            "data": {
-                "uiid": 12
-            }
-        }
-        payload = json.dumps(payload)
-        res = self.client.post(reverse("get-balance"),
-                               data=payload,
-                               content_type="application/json")
-        self.assertEqual(res.status_code, 400)
-
     def test_get_balance_no_such_user(self):
         """
         Has to return 404 NOT FOUND HTTP-response
         """
-        payload = {
-            "data": {
-                "user_id": 12
-            }
-        }
-        payload = json.dumps(payload)
-        res = self.client.post(reverse("get-balance"),
-                               data=payload,
-                               content_type="application/json")
+        res = self.client.get(reverse("get-balance", args=[12345]))
         self.assertEqual(res.status_code, 404)
 
     def test_get_balance_ok(self):
         """
         Has to return 200 OK HTTP-response and the balance of the user
         """
-        payload = {
-            "data": {
-                "user_id": self.user_ids[1]
-            }
-        }
-        payload = json.dumps(payload)
-        res = self.client.post(reverse("get-balance"),
-                               data=payload,
-                               content_type="application/json")
+        res = self.client.get(reverse("get-balance", args=[self.user_ids[1]]))
         self.assertEqual(res.status_code, 200)
         data = res.data.get("data")
         self.assertEqual(data.get("balance"), 2000)

@@ -51,10 +51,6 @@ class ChangeBalanceSerializer(MyBaseSerializer):
         return instance
 
 
-class GetBalanceSerializer(MyBaseSerializer):
-    user_id = serializers.IntegerField()
-
-
 class GetTransactionsSerializer(MyBaseSerializer):
     user_id = serializers.IntegerField()
     sort_by = serializers.CharField()

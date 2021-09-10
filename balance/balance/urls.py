@@ -21,7 +21,7 @@ from .api import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/change-balance/", views.ChangeBalance.as_view(), name="change-balance"),
-    path("api/get-balance/", views.GetBalance.as_view(), name="get-balance"),
+    path("api/get-balance/<int:user_id>/", views.GetBalance.as_view(), name="get-balance"),
     path("api/make-transfer/", views.MakeTransfer.as_view(), name="make-transfer"),
     path("api/get-transactions/", views.GetTransactions.as_view(), name="get-transactions")
 ]

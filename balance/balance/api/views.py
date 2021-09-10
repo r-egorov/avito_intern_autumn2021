@@ -14,9 +14,8 @@ from rest_framework.views import APIView
 from rest_framework.parsers import JSONParser
 
 from .serializers import BalanceSerializer, \
-    ChangeBalanceSerializer, GetBalanceSerializer, \
-    MakeTransferSerializer, TransactionSerializer, \
-    GetTransactionsSerializer
+    ChangeBalanceSerializer, MakeTransferSerializer, \
+    TransactionSerializer, GetTransactionsSerializer
 from .models import Balance, Transaction
 from .exceptions import BalanceDoesNotExist, InvalidSortField
 from .pagination import BasicPagination
@@ -109,20 +108,20 @@ class ChangeBalance(BaseView):
         return Response(payload, status=http_status)
 
 
-class GetBalance(BaseView):
-    serializer = GetBalanceSerializer
+class GetBalance(APIView):
+    serializer = BalanceSerializer
     resource_name = "get_balance"
 
-    def handler(self, serializer) -> Response:
+    def get(self, request, user_id) -> Response:
         payload = {}
         http_status = status.HTTP_200_OK
 
         try:
-            balance: Balance = self.get_balances(serializer, "user_id")[0]
+            balance: Balance = Balance.objects.get(user_id=user_id)
             payload["data"] = BalanceSerializer(balance).data
-        except BalanceDoesNotExist as e:
+        except Balance.DoesNotExist:
             http_status = status.HTTP_404_NOT_FOUND
-            payload["errors"] = {e.field_name: ["No user with such ID found"]}
+            payload["errors"] = {"user_id": ["No user with such ID found"]}
 
         return Response(payload, status=http_status)
 
