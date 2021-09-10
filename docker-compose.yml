@@ -11,8 +11,8 @@ services:
             - APP_USER=${APP_USER}
             - APP_USER_PASSWORD=${APP_USER_PASSWORD}
             - APP_DB=${APP_DB}
-        ports:
-            - 5432:5432
+        expose:
+            - "5432"
         networks:
             - app-network
         volumes:
