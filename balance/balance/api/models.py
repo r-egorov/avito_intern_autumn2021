@@ -3,8 +3,6 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 
-from typing import Dict
-
 
 class Balance(models.Model):
     balance = models.DecimalField(max_digits=9, decimal_places=2, default=0, null=False,

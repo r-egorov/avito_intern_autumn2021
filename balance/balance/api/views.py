@@ -15,7 +15,7 @@ from rest_framework.parsers import JSONParser
 
 from .serializers import BalanceSerializer, \
     ChangeBalanceSerializer, MakeTransferSerializer, \
-    TransactionSerializer, GetTransactionsSerializer
+    TransactionSerializer
 from .models import Balance, Transaction
 from .exceptions import BalanceDoesNotExist, InvalidSortField
 from .pagination import BasicPagination
